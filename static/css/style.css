@@ -1,183 +1,482 @@
-import os
-from flask import Flask, render_template, abort
-from datetime import datetime, timedelta
+/* ===================== 기본 설정 ===================== */
+:root {
+  --naver-green: #03c75a;
+  --naver-green-dark: #02a64c;
+  --naver-green-light: #e8f9ef;
+  --accent-orange: #ff7a59;
+  --accent-pink: #ff5e8a;
+  --accent-gold: #ffc233;
+  --gray-bg: #f4f6f5;
+  --gray-border: #e3e7e5;
+  --text-dark: #222;
+  --text-mid: #5b6660;
+  --text-light: #94a09a;
+  --radius: 10px;
+  --shadow-soft: 0 2px 8px rgba(3, 199, 90, 0.08);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+* { box-sizing: border-box; }
 
-app = Flask(
-    __name__,
-    template_folder=os.path.join(BASE_DIR, "templates"),
-    static_folder=os.path.join(BASE_DIR, "static"),
-    static_url_path="/static",
-)
+body {
+  margin: 0;
+  font-family: "Noto Sans KR", "Gowun Dodum", sans-serif;
+  background: var(--gray-bg);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+}
 
-CAFE_NAME = "전국 맛집 탐방단"
-CAFE_INTRO = "맛있는 정보를 나누는 사람들 🍜"
-MEMBER_COUNT = 128934
-TODAY_VISIT = 4271
-TOTAL_VISIT = 9824011
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; margin: 0; padding: 0; }
 
-BOARDS = [
-    {"id": "notice", "name": "📌 공지사항", "desc": "카페 운영 공지"},
-    {"id": "free", "name": "💬 자유게시판", "desc": "자유롭게 이야기해요"},
-    {"id": "review", "name": "🍽️ 맛집 후기", "desc": "다녀온 맛집 후기 공유"},
-    {"id": "qna", "name": "❓ 맛집 질문", "desc": "맛집 추천 받아요"},
-    {"id": "market", "name": "🛍️ 장터", "desc": "식기/식자재 나눔 장터"},
-]
+/* ===================== 상단 작은 바 ===================== */
+.topbar {
+  background: #1b2a23;
+  color: #cfe9d8;
+  font-size: 12px;
+}
+.topbar-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 6px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.topbar-logo { font-weight: 700; letter-spacing: 0.5px; }
+.topbar-menu { display: flex; gap: 16px; }
+.topbar-menu li { cursor: pointer; opacity: 0.85; }
+.topbar-menu li:hover { opacity: 1; text-decoration: underline; }
 
-GRADES = [
-    {"name": "씨앗", "icon": "🌱", "min": 0},
-    {"name": "새싹", "icon": "🌿", "min": 10},
-    {"name": "나무", "icon": "🌳", "min": 50},
-    {"name": "열매", "icon": "🍎", "min": 150},
-    {"name": "카페마스터", "icon": "👑", "min": 500},
-]
+/* ===================== 카페 헤더 (배너) ===================== */
+.cafe-header {
+  background: linear-gradient(120deg, var(--naver-green) 0%, #06d96a 45%, #04b85c 100%);
+  position: relative;
+  overflow: hidden;
+}
+.cafe-header::before {
+  content: "";
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%);
+  border-radius: 50%;
+}
+.cafe-header::after {
+  content: "";
+  position: absolute;
+  bottom: -90px; left: 10%;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%);
+  border-radius: 50%;
+}
+.cafe-header-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 16px 26px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+.cafe-emblem {
+  width: 72px; height: 72px;
+  background: #fff;
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.cafe-title-wrap { flex: 1; min-width: 160px; }
+.cafe-title {
+  font-family: "Jua", sans-serif;
+  font-size: 28px;
+  color: #fff;
+  margin: 0 0 4px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.cafe-sub { color: #eafff2; font-size: 14px; margin: 0; }
 
-def grade_for(score):
-    g = GRADES[0]
-    for gr in GRADES:
-        if score >= gr["min"]:
-            g = gr
-    return g
+.cafe-stats {
+  display: flex;
+  gap: 18px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 14px;
+  padding: 10px 18px;
+  backdrop-filter: blur(2px);
+}
+.stat { text-align: center; color: #fff; }
+.stat-num { display: block; font-weight: 800; font-size: 16px; }
+.stat-label { display: block; font-size: 11px; opacity: 0.9; }
 
-POSTS = [
-    {
-        "id": 1, "board": "notice", "title": "[필독] 카페 가입 인사 & 등업 안내",
-        "author": "카페매니저", "score": 999, "date": datetime.now() - timedelta(days=2),
-        "views": 15234, "likes": 482, "comments": 37, "is_notice": True,
-        "content": "안녕하세요! 전국 맛집 탐방단에 가입해주셔서 감사합니다.\n가입 인사 게시판에 인사를 남겨주시면 등업이 진행됩니다.\n매주 맛집 정모도 진행하니 많은 참여 부탁드려요!",
-    },
-    {
-        "id": 2, "board": "notice", "title": "[이벤트] 9월 맛집 사진 공모전 - 상품 50만원",
-        "author": "카페매니저", "score": 999, "date": datetime.now() - timedelta(days=5),
-        "views": 8341, "likes": 301, "comments": 52, "is_notice": True,
-        "content": "9월 한달간 맛집 사진 공모전을 진행합니다! 베스트 사진에게는 50만원 상당의 상품권을 드려요.",
-    },
-    {
-        "id": 3, "board": "review", "title": "강남역 노포 곱창집 후기 (사진 30장)",
-        "author": "곱창러버", "score": 320, "date": datetime.now() - timedelta(hours=3),
-        "views": 5123, "likes": 211, "comments": 44,
-        "content": "강남역 뒷골목에 숨어있는 곱창집을 다녀왔습니다. 가격도 착하고 양도 푸짐해서 강추합니다!\n분위기도 옛날 느낌 그대로라 정겨웠어요.",
-    },
-    {
-        "id": 4, "board": "review", "title": "을지로 노가리골목 직접 가본 후기",
-        "author": "맥주왕김부장", "score": 88, "date": datetime.now() - timedelta(hours=7),
-        "views": 3210, "likes": 134, "comments": 28,
-        "content": "을지로 노가리골목은 분위기 하나로 가는 곳! 노가리에 시원한 맥주 한잔, 직장인들의 힐링 코스입니다.",
-    },
-    {
-        "id": 5, "board": "qna", "title": "성수동 데이트 맛집 추천해주세요 ㅠㅠ",
-        "author": "곧소개팅", "score": 12, "date": datetime.now() - timedelta(hours=1),
-        "views": 982, "likes": 9, "comments": 21,
-        "content": "다음주에 성수동에서 소개팅이 있는데 분위기 좋은 맛집 추천 부탁드려요! 예산은 인당 5만원 정도입니다.",
-    },
-    {
-        "id": 6, "board": "qna", "title": "부산 여행 중인데 회 맛집 어디가 좋을까요?",
-        "author": "부산초보", "score": 5, "date": datetime.now() - timedelta(minutes=40),
-        "views": 421, "likes": 4, "comments": 13,
-        "content": "이번 주말 부산 여행 가는데 자갈치시장 근처 회 맛집 추천 부탁드립니다!",
-    },
-    {
-        "id": 7, "board": "free", "title": "오늘 점심 뭐드셨나요? 저는 김치찌개",
-        "author": "점심이고민", "score": 45, "date": datetime.now() - timedelta(hours=2),
-        "views": 1532, "likes": 22, "comments": 31,
-        "content": "다들 점심 뭐 드셨나요~ 저는 회사 앞 분식집에서 김치찌개 먹었어요. 다들 점메추 부탁드려요!",
-    },
-    {
-        "id": 8, "board": "free", "title": "맛집 탐방 다닐 때 카메라 추천 좀",
-        "author": "사진초보", "score": 30, "date": datetime.now() - timedelta(hours=10),
-        "views": 980, "likes": 15, "comments": 19,
-        "content": "맛집 사진 예쁘게 찍으려고 하는데 가벼운 미러리스 카메라 추천해주실 분 있을까요?",
-    },
-    {
-        "id": 9, "board": "market", "title": "안쓰는 에어프라이어 무료 나눔합니다",
-        "author": "정리의신", "score": 60, "date": datetime.now() - timedelta(days=1),
-        "views": 2210, "likes": 88, "comments": 40,
-        "content": "이사 가면서 거의 새 제품인 에어프라이어 무료로 나눔합니다. 댓글로 신청해주세요!",
-    },
-    {
-        "id": 10, "board": "market", "title": "수제 전통 고추장 판매합니다 (직접 담음)",
-        "author": "시골할머니손맛", "score": 200, "date": datetime.now() - timedelta(hours=15),
-        "views": 1890, "likes": 67, "comments": 22,
-        "content": "친정에서 직접 담은 전통 고추장 소량 판매합니다. 깊은 맛이 일품이에요!",
-    },
-]
+.join-btn {
+  background: #fff;
+  color: var(--naver-green-dark);
+  border: none;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 12px 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+.join-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.18); }
 
-def time_ago(dt):
-    diff = datetime.now() - dt
-    if diff.days >= 1:
-        return f"{diff.days}일 전"
-    hours = diff.seconds // 3600
-    if hours >= 1:
-        return f"{hours}시간 전"
-    minutes = (diff.seconds % 3600) // 60
-    return f"{minutes}분 전"
+/* ===================== 퀵 네비게이션 ===================== */
+.quicknav {
+  background: #fff;
+  border-bottom: 2px solid var(--naver-green);
+  box-shadow: var(--shadow-soft);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.quicknav-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  overflow-x: auto;
+  padding: 0 8px;
+}
+.qn-item {
+  padding: 13px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-mid);
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s ease;
+}
+.qn-item:hover {
+  color: var(--naver-green-dark);
+  border-bottom-color: var(--naver-green);
+  background: var(--naver-green-light);
+}
 
-def board_name(bid):
-    for b in BOARDS:
-        if b["id"] == bid:
-            return b["name"]
-    return bid
+/* ===================== 레이아웃 ===================== */
+.layout {
+  max-width: 1080px;
+  margin: 20px auto;
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 18px;
+  padding: 0 16px;
+  align-items: start;
+}
 
-def decorate(post):
-    p = dict(post)
-    p["time_ago"] = time_ago(post["date"])
-    p["grade"] = grade_for(post["score"])
-    p["board_name"] = board_name(post["board"])
-    return p
+/* ----- 사이드바 ----- */
+.side-box {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.side-title {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  color: var(--text-dark);
+}
+.board-list li a {
+  display: block;
+  padding: 7px 4px;
+  font-size: 13.5px;
+  color: var(--text-mid);
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
+}
+.board-list li a:hover {
+  background: var(--naver-green-light);
+  color: var(--naver-green-dark);
+  padding-left: 10px;
+}
 
-@app.route("/")
-def index():
-    notices = [decorate(p) for p in POSTS if p.get("is_notice")]
-    recent = sorted(
-        [decorate(p) for p in POSTS if not p.get("is_notice")],
-        key=lambda x: x["date"], reverse=True
-    )
-    best = sorted(POSTS, key=lambda x: x["likes"], reverse=True)[:5]
-    best = [decorate(p) for p in best]
-    return render_template(
-        "index.html",
-        cafe_name=CAFE_NAME, cafe_intro=CAFE_INTRO,
-        member_count=MEMBER_COUNT, today_visit=TODAY_VISIT, total_visit=TOTAL_VISIT,
-        boards=BOARDS, notices=notices, recent=recent, best=best,
-    )
+.grade-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  padding: 5px 2px;
+  color: var(--text-mid);
+}
+.grade-list li:nth-child(1) { color: var(--accent-gold); font-weight: 800; }
+.g-score { margin-left: auto; color: var(--text-light); }
 
-@app.route("/board/<board_id>")
-def board(board_id):
-    b = next((x for x in BOARDS if x["id"] == board_id), None)
-    if not b:
-        abort(404)
-    posts = sorted(
-        [decorate(p) for p in POSTS if p["board"] == board_id],
-        key=lambda x: x["date"], reverse=True
-    )
-    return render_template(
-        "board.html", cafe_name=CAFE_NAME, cafe_intro=CAFE_INTRO, boards=BOARDS, board=b, posts=posts,
-        member_count=MEMBER_COUNT, today_visit=TODAY_VISIT, total_visit=TOTAL_VISIT,
-    )
+.ad-box {
+  background: linear-gradient(135deg, var(--accent-orange), var(--accent-pink));
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+.ad-box strong { display: block; margin-top: 4px; font-size: 14px; }
 
-@app.route("/post/<int:post_id>")
-def post(post_id):
-    p = next((x for x in POSTS if x["id"] == post_id), None)
-    if not p:
-        abort(404)
-    p = decorate(p)
-    others = sorted(
-        [decorate(x) for x in POSTS if x["board"] == p["board"] and x["id"] != post_id],
-        key=lambda x: x["date"], reverse=True
-    )[:5]
-    return render_template(
-        "post.html", cafe_name=CAFE_NAME, cafe_intro=CAFE_INTRO, boards=BOARDS, post=p, others=others,
-        member_count=MEMBER_COUNT, today_visit=TODAY_VISIT, total_visit=TOTAL_VISIT,
-    )
+/* ----- 컨텐츠 공통 ----- */
+.content { min-width: 0; }
+.board-section-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  padding-left: 2px;
+  border-left: 4px solid var(--naver-green);
+  padding-left: 10px;
+}
 
-@app.errorhandler(404)
-def not_found(e):
-    return render_template(
-        "404.html", cafe_name=CAFE_NAME, cafe_intro=CAFE_INTRO, boards=BOARDS,
-        member_count=MEMBER_COUNT, today_visit=TODAY_VISIT, total_visit=TOTAL_VISIT,
-    ), 404
+.notice-board {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  border-top: 3px solid var(--accent-gold);
+}
 
-if __name__ == "__main__":
-    # 로컬 테스트용 (vercel dev 또는 python api/index.py)
-    app.run(debug=True, port=5000)
+.post-list .post-row {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 4px;
+  border-bottom: 1px dashed var(--gray-border);
+}
+.post-list .post-row:last-child { border-bottom: none; }
+.post-link { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.post-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: color 0.15s ease;
+}
+.post-row:hover .post-title { color: var(--naver-green-dark); text-decoration: underline; }
+.comment-count { color: var(--accent-pink); font-size: 12.5px; font-weight: 700; }
+.post-meta { font-size: 12px; color: var(--text-light); margin-top: 3px; display: flex; align-items: center; gap: 4px;}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: #fff;
+}
+.badge-notice { background: var(--accent-gold); color: #5a4400; }
+.badge-board { background: var(--naver-green); }
+.badge-new { background: var(--accent-pink); animation: pulse 1.6s infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* ----- 메인 2단 그리드 (홈) ----- */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 18px;
+}
+.main-col, .side-col { min-width: 0; }
+.main-col {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+}
+
+.best-box {
+  background: linear-gradient(160deg, #1b2a23, #2e463a);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+}
+.best-box .side-title { color: #fff; }
+.best-list li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.best-list li:last-child { border-bottom: none; }
+.best-list a { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.best-title { color: #eafff2; }
+.best-list a:hover .best-title { text-decoration: underline; }
+
+.rank-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+  background: #50635a; color: #fff;
+  flex-shrink: 0;
+}
+.rank-1 { background: var(--accent-gold); color: #5a4400; }
+.rank-2 { background: #d8d8d8; color: #444; }
+.rank-3 { background: #d99a5b; color: #432a09; }
+
+/* ----- 게시판 테이블 ----- */
+.board-page-header { margin-bottom: 14px; }
+.board-desc { color: var(--text-light); font-size: 13px; margin: 4px 0 0 10px; }
+
+.board-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  font-size: 13.5px;
+}
+.board-table thead {
+  background: var(--naver-green-light);
+  color: var(--naver-green-dark);
+}
+.board-table th {
+  padding: 11px 8px;
+  font-weight: 800;
+  font-size: 12.5px;
+}
+.board-table td {
+  padding: 11px 8px;
+  border-bottom: 1px solid var(--gray-border);
+  text-align: center;
+}
+.board-table .col-title { text-align: left; }
+.board-table .col-title a:hover { color: var(--naver-green-dark); text-decoration: underline; }
+.board-table tbody tr:hover { background: #fafffc; }
+.empty-row { color: var(--text-light); padding: 30px 0 !important; }
+
+/* ===================== 게시글 상세 ===================== */
+.post-detail {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 24px 26px;
+}
+.post-detail-board {
+  display: inline-block;
+  background: var(--naver-green);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.post-detail-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+.post-detail-meta {
+  font-size: 13px;
+  color: var(--text-light);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--gray-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.author-chip { display: flex; align-items: center; gap: 4px; color: var(--text-mid); font-weight: 600; }
+.grade-tag {
+  background: var(--naver-green-light);
+  color: var(--naver-green-dark);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.dot { color: var(--gray-border); }
+
+.post-detail-body {
+  padding: 22px 0;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-dark);
+}
+.post-detail-body p { margin: 0 0 12px; }
+
+.post-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 0;
+  border-top: 1px solid var(--gray-border);
+}
+.post-actions button {
+  border: 1px solid var(--gray-border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-mid);
+  transition: all 0.15s ease;
+}
+.like-btn:hover { background: var(--naver-green); color: #fff; border-color: var(--naver-green); }
+.share-btn:hover, .scrap-btn:hover { background: var(--gray-bg); }
+
+.comment-section { margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--gray-border); }
+.comment-input-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.comment-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-border);
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.comment-input:focus { outline: none; border-color: var(--naver-green); }
+.comment-submit {
+  background: var(--naver-green);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.comment-submit:hover { background: var(--naver-green-dark); }
+.comment-list li {
+  font-size: 13.5px;
+  padding: 8px 2px;
+  border-bottom: 1px dashed var(--gray-border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-mid);
+}
+.c-time { margin-left: auto; color: var(--text-light); font-size: 11.5px; }
+
+.other-posts {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+  margin-top: 16px;
+}
+
+/* ===================== 푸터 ===================== */
+.cafe-footer {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 12px;
+  padding: 30px 16px 40px;
+}
+
+/* ===================== 404 ===================== */
+.not-found {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 60px 20px;
+  text-align: center;
+}
+.not-found h2 { margin-bottom: 8px; }
+.not-found p { color: var(--text-light); margin-bottom: 20px; }
+.not-found .join-btn { background: var(--naver-green); color: #fff; }
+
+/* ===================== 반응형 ===================== */
+@media (max-width: 760px) {
+  .layout { grid-template-columns: 1fr; }
+  .main-grid { grid-template-columns: 1fr; }
+  .cafe-header-inner { flex-wrap: wrap; }
+  .cafe-stats { order: 3; width: 100%; justify-content: space-around; }
+  .join-btn { order: 2; }
+  .sidebar { order: 2; }
+}
